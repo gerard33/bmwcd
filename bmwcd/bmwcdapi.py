@@ -53,7 +53,7 @@ import xml.etree.ElementTree as etree
 USERNAME = None                     # Your BMW ConnectedDrive username
 PASSWORD = None                     # Your BMW ConnectedDrive password
 VIN = None                          # Vehicle Identification Number (VIN) can be found in the app or on BMW ConnectedDrive online
-URL = None   # This is the URL you use to login to BMW ConnectedDrive, e.g. www.bmw-connecteddrive.nl or www.bmw-connecteddrive.de
+URL = None                          # This is the URL you use to login to BMW ConnectedDrive, e.g. www.bmw-connecteddrive.nl or www.bmw-connecteddrive.de
 # ----=================================================----
 
 TIMEOUT = 10 ### TO DO
@@ -63,7 +63,7 @@ _LOGGER = logging.getLogger(__name__)
 # API Gateway
 AUTH_API = 'https://customer.bmwgroup.com/gcdm/oauth/authenticate'
 ###COUNTRY_CODE = 'nl'
-VEHICLE_API = 'https://{}/api/vehicle'.format(URL)
+#VEHICLE_API = 'https://{}/api/vehicle'.format(URL)
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0"
 
 class ConnectedDrive(object):
@@ -73,6 +73,7 @@ class ConnectedDrive(object):
         self.bmwUsername = username
         self.bmwPassword = password
         self.bmwVin = vin
+        self.bmwURL = 'https://{}/api/vehicle'.format(url)
         self.accessToken = None             #"AccessToken [%s]"
         self.tokenExpires = 'NULL'          #"TokenExpires [%s]"    ### Wordt blijkbaar opgeslagen, nakijken of ik dat ook ergens moet doen
 
@@ -80,6 +81,13 @@ class ConnectedDrive(object):
 
         if((self.tokenExpires == 'NULL') or (int(time.time()) >= int(self.tokenExpires))):
             self.generate_credentials()
+
+    def update(self):
+        """ Simple BMW ConnectedDrive API.
+
+        """
+        ### NOG BIJWERKEN, HIER ZIT TIJDSINTERVAL IN
+        self.get_car_data()
 
     def generate_credentials(self):
         """
@@ -132,7 +140,7 @@ class ConnectedDrive(object):
         car_data_return_value = {}
         execStatusCode = 0 #ok
         ### Try: NOG TOEVOEGEN
-        data_response = requests.get(VEHICLE_API+'/dynamic/v1/'+self.bmwVin+'?offset=-60', headers=headers, allow_redirects=True)
+        data_response = requests.get(self.bmwURL+'/dynamic/v1/'+self.bmwVin+'?offset=-60', headers=headers, allow_redirects=True)
         if data_response.status_code == 200:
             ###if map is not None and not map.get('error'):
             map_car_data = data_response.json()['attributesMap']  #attributesMap, vehicleMessages, niet werkend: cbsMessages, twoTimeTimer, characteristicList, lifeTimeList, lastTripList
@@ -159,7 +167,7 @@ class ConnectedDrive(object):
 
         execStatusCode1 = 0 #ok
 
-        navigation_response = requests.get(VEHICLE_API+'/navigation/v1/'+self.bmwVin, headers=headers, allow_redirects=True)
+        navigation_response = requests.get(self.bmwURL+'/navigation/v1/'+self.bmwVin, headers=headers, allow_redirects=True)
         if navigation_response.status_code == 200:
             map_car_navigation = navigation_response.json()
 
@@ -186,7 +194,7 @@ class ConnectedDrive(object):
 
         execStatusCode2 = 0 #ok
 
-        efficiency_response = requests.get(VEHICLE_API+'/efficiency/v1/'+self.bmwVin, headers=headers, allow_redirects=True)
+        efficiency_response = requests.get(self.bmwURL+'/efficiency/v1/'+self.bmwVin, headers=headers, allow_redirects=True)
         if efficiency_response.status_code == 200:
             map_car_efficiency = efficiency_response.json()
             
@@ -224,7 +232,7 @@ class ConnectedDrive(object):
 
         execStatusCode3 = 0 #ok
 
-        service_partner_response = requests.get(VEHICLE_API+'/servicepartner/v1/'+self.bmwVin, headers=headers, allow_redirects=True)
+        service_partner_response = requests.get(self.bmwURL+'/servicepartner/v1/'+self.bmwVin, headers=headers, allow_redirects=True)
         if service_partner_response.status_code == 200:
             map_car_service_partner = service_partner_response.json()
             my_dealer = service_partner_response.json()["dealer"]
@@ -276,7 +284,7 @@ class ConnectedDrive(object):
         execStatusCode = 0
         remoteServiceStatus = ""
 
-        execute_response = requests.post(VEHICLE_API+'/remoteservices/v1/'+self.bmwVin+'/'+command, headers=headers, allow_redirects=True)
+        execute_response = requests.post(self.bmwURL+'/remoteservices/v1/'+self.bmwVin+'/'+command, headers=headers, allow_redirects=True)
         if execute_response.status_code != 200:
             execStatusCode = 70 #errno ECOMM, Communication error on send
 
@@ -286,7 +294,7 @@ class ConnectedDrive(object):
         if execStatusCode == 0:
             for i in range(MAX_RETRIES):
                 time.sleep(INTERVAL)
-                remoteservices_response = requests.get(VEHICLE_API+'/remoteservices/v1/'+self.bmwVin+'/state/execution', headers=headers, allow_redirects=True)
+                remoteservices_response = requests.get(self.bmwURL+'/remoteservices/v1/'+self.bmwVin+'/state/execution', headers=headers, allow_redirects=True)
                 #print("status execstate " + str(remoteservices_response.status_code) + " " + remoteservices_response.text)
                 root = etree.fromstring(remoteservices_response.text)
                 remoteServiceStatus = root.find('remoteServiceStatus').text
