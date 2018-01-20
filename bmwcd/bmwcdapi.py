@@ -50,10 +50,17 @@ import xml.etree.ElementTree as etree
 
 # ----=================================================----
 # Enter the data below to be able to login
-USERNAME = None                     # Your BMW ConnectedDrive username
-PASSWORD = None                     # Your BMW ConnectedDrive password
-VIN = None                          # Vehicle Identification Number (VIN) can be found in the app or on BMW ConnectedDrive online
-URL = None                          # This is the URL you use to login to BMW ConnectedDrive, e.g. www.bmw-connecteddrive.nl or www.bmw-connecteddrive.de
+# Your BMW ConnectedDrive username
+USERNAME = None     # "email@gmail.com"
+
+# Your BMW ConnectedDrive password
+PASSWORD = None     # "your_password"
+
+# 17!! chars Vehicle Identification Number (VIN) of the car, can be found in the app or on BMW ConnectedDrive online
+VIN = None          # "vin_code"
+
+# This is the URL you use to login to BMW ConnectedDrive, e.g. www.bmw-connecteddrive.nl or www.bmw-connecteddrive.de
+URL = None          # "www.bmw-connecteddrive.nl"
 # ----=================================================----
 
 TIMEOUT = 10 ### TO DO
