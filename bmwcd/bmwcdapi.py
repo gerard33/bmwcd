@@ -168,14 +168,8 @@ class ConnectedDrive(object):
         data_response = requests.get(self.bmw_url+'/dynamic/v1/'+self.bmw_vin+'?offset=-60', headers=headers, allow_redirects=True)
         if data_response.status_code == 200:
             ###if map is not None and not map.get('error'):
+            ###NOG CONTROLE OP VOLLEDIGHEID TOEVOEGEN
             map_car_data = data_response.json()['attributesMap']  #attributesMap, vehicleMessages, niet werkend: cbsMessages, twoTimeTimer, characteristicList, lifeTimeList, lastTripList
-
-            # Make a dict with car data
-            my_dict = {}
-            my_dict["my_vin"] = self.bmw_vin
-            my_dict["my_car"] = self.car_name
-            # Add the car data dict to the dict collected from BMW ConnectedDrive
-            map_car_data.update(my_dict)
 
             #optional print all values
             if self.printall == True:
@@ -188,7 +182,9 @@ class ConnectedDrive(object):
             #print(type(map_car_data)) #is het een dict?
                 
         else :
+            print('Error with get_car_data')
             print(data_response.status_code)    ###503 --> Uw autogegevens konden niet worden geladen
+            print(data_response.text)
             execStatusCode = 70 #errno ECOMM, Communication error on send
             return False ###
 
@@ -216,11 +212,9 @@ class ConnectedDrive(object):
                 #self.ohPutValue("Bmw_socMax",map['socMax'])
                 #print("Bmw_socMax",map['socMax'])
         else:
-            ### BIJ ALLE ANDERE FUNCTIE OOK NOG TOEVOEGEN
             print('Error with get_car_navigation')
             print(navigation_response.status_code)
             print(navigation_response.text)
-            ###
             execStatusCode1 = 70 #errno ECOMM, Communication error on send
             return False ###
 
@@ -259,7 +253,9 @@ class ConnectedDrive(object):
             #     elif (listItem["name"] == "CUMULATED_ELECTRIC_DRIVEN_DISTANCE"):
             #         pass
         else:
+            print('Error with get_car_efficiency')
             print(efficiency_response.status_code)
+            print(efficiency_response.text)
             execStatusCode2 = 70 #errno ECOMM, Communication error on send
             return False ###
 
@@ -286,7 +282,9 @@ class ConnectedDrive(object):
                 print('--------------END CAR SERVICEPARTNER--------------')
 
         else:
+            print('Error with get_car_service_partner')
             print(service_partner_response.status_code)
+            print(service_partner_response.text)
             execStatusCode3 = 70 #errno ECOMM, Communication error on send
             return False ###
 
