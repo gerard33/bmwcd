@@ -147,7 +147,7 @@ class ConnectedDrive(object):
         ###self.ohPutValue('Bmw_accessToken',self.accesstoken)
 
         self.token_expires = int(time.time()) + int(m.group(3))
-        print("token expires in: " + self.token_expires)
+        #print("token expires in: " + str(self.token_expires))
         ###self.ohPutValue('Bmw_tokenExpires',self.token_expires)
 
     # def ohPutValue(self, item, value):
