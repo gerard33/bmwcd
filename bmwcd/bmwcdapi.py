@@ -115,7 +115,7 @@ class ConnectedDrive(object):
                 _LOGGER.error("Data retrieved from car") ### nog aanpassen naar debug of info
                 return result
             
-            _LOGGER.error("No data retrieved from car")
+            _LOGGER.debug("No data retrieved from car")
             return False
 
     def generate_credentials(self):
