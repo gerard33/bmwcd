@@ -91,7 +91,7 @@ class ConnectedDrive(object):
         self.bmw_password = password
         self.bmw_vin = vin
         self.car_name = car_name
-        self.update_interval = update_interval
+        self.update_interval = update_interval * 60
         self.last_update_time = 0
         self.bmw_url = 'https://{}/api/vehicle'.format(url)
         self.accesstoken = None             #"AccessToken [%s]"
@@ -110,8 +110,11 @@ class ConnectedDrive(object):
         cur_time = time.time()
         with self._lock:
             if cur_time - self.last_update_time > self.update_interval:
-                self.get_car_data()
-                self.last_update_time = time.time()      
+                result = self.get_car_data()
+                self.last_update_time = time.time()
+                return result
+
+            return False
 
     def generate_credentials(self):
         """
@@ -162,7 +165,6 @@ class ConnectedDrive(object):
         """Get data from BMW Connected Drive."""
         headers = {"Content-Type": "application/json", "User-agent": USER_AGENT, "Authorization" : "Bearer "+ self.accesstoken}
 
-        car_data_return_value = {}
         execStatusCode = 0 #ok
         ### Try: NOG TOEVOEGEN
         data_response = requests.get(self.bmw_url+'/dynamic/v1/'+self.bmw_vin+'?offset=-60', headers=headers, allow_redirects=True)
@@ -185,6 +187,9 @@ class ConnectedDrive(object):
             print('Error with get_car_data')
             print(data_response.status_code)    ###503 --> Uw autogegevens konden niet worden geladen
             print(data_response.text)
+
+            _LOGGER.error("Unable to communicate with BMW ConnectedDrive API. Error code: %s Reason: %s", str(data_response.status_code), data_response.text) ### nog aanpassen naar debug of info
+
             execStatusCode = 70 #errno ECOMM, Communication error on send
             return False ###
 
