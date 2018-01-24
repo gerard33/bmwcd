@@ -171,6 +171,7 @@ class ConnectedDrive(object):
     def get_car_data(self):
         """Get data from BMW Connected Drive."""
         
+        cur_time = time.time()
         if self.token_expires == 0 or int(cur_time) >= int(self.token_expires):
             self.generate_credentials()
             _LOGGER.error("New credentials from BMW Connected Drive API, token: %s, expires in: %d", self.accesstoken, self.token_expires) ### nog aanpassen naar debug of info
