@@ -34,6 +34,7 @@ import argparse
 import xml.etree.ElementTree as etree
 
 ###TIMEOUT toevoegen, zie https://github.com/RiRomain/python-mercedes-api/blob/master/mercedesapi/__init__.py
+###TRY, EXCEPT toevoegen ook van deze url
 
 ### TO DO
 ### Meerdere auto's ondersteunen --> hoeft niet want ondersteund BMW ConnectedDrive niet via API
@@ -98,10 +99,11 @@ class ConnectedDrive(object):
         self.bmw_url = 'https://{}/api/vehicle'.format(url)
         self.accesstoken = None             #"AccessToken [%s]"
         self.token_expires = 0              #"TokenExpires [%s]"    ### Wordt blijkbaar opgeslagen, nakijken of ik dat ook ergens moet doen
+        self.token_expires_date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(self.token_expires))
 
         ###!!! NOG NAKIJKEN HOE TOKEN OPGESLAGEN WORDT https://github.com/frankjoke/ioBroker.bmw/blob/master/connectedDrive.js
 
-        if self.token_expires == 0 or int(time.time()) >= int(self.token_expires):
+        if int(time.time()) >= int(self.token_expires):
             self.generate_credentials()
 
     def update(self):
@@ -117,11 +119,22 @@ class ConnectedDrive(object):
                 result = self.get_car_data()
                 # Update the new time
                 self.last_update_time = time.time()
-                _LOGGER.error("Data retrieved from car") ### nog aanpassen naar debug of info
+                _LOGGER.error("%s: data retrieved from car", self.car_name) ### nog aanpassen naar debug of info
                 return result
             
-            _LOGGER.debug("No data retrieved from car")
+            _LOGGER.debug("%s: no data retrieved from car", self.car_name)
             return False
+
+    def token_valid(self):
+        """Check if token is still valid, if not make new token."""
+        cur_time = time.time()
+        if int(cur_time) >= int(self.token_expires):     ### nog aanpassen self.token_expires == 0 kan weg, want 2e deel is altijd waar is waarde == 0
+            self.generate_credentials()
+            _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s, expires at: %d)",
+                          self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
+        else:
+            _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s, expires at: %d)",
+                          self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
 
     def generate_credentials(self):
         """
@@ -171,13 +184,8 @@ class ConnectedDrive(object):
     def get_car_data(self):
         """Get data from BMW Connected Drive."""
         
-        cur_time = time.time()
-        if self.token_expires == 0 or int(cur_time) >= int(self.token_expires):
-            self.generate_credentials()
-            _LOGGER.error("New credentials from BMW Connected Drive API, token: %s, expires in: %d", self.accesstoken, self.token_expires) ### nog aanpassen naar debug of info
-        else:
-            _LOGGER.error("Current credentials from BMW Connected Drive API still valid, token: %s, expires in: %d", self.accesstoken, self.token_expires) ### nog aanpassen naar debug of info
-        
+        self.token_valid()  # Check if current token is still valid
+
         headers = {"Content-Type": "application/json", "User-agent": USER_AGENT, "Authorization" : "Bearer "+ self.accesstoken}
 
         execStatusCode = 0 #ok
@@ -215,6 +223,9 @@ class ConnectedDrive(object):
 
     def get_car_navigation(self):
         """Get navigation data from BMW Connected Drive."""
+        
+        self.token_valid()  # Check if current token is still valid
+        
         headers = {"Content-Type": "application/json", "User-agent": USER_AGENT, "Authorization" : "Bearer "+ self.accesstoken}
 
         execStatusCode1 = 0 #ok
@@ -245,6 +256,9 @@ class ConnectedDrive(object):
 
     def get_car_efficiency(self):
         """Get efficiency data from BMW Connected Drive."""
+        
+        self.token_valid()  # Check if current token is still valid
+        
         headers = {"Content-Type": "application/json", "User-agent": USER_AGENT, "Authorization" : "Bearer "+ self.accesstoken}
 
         execStatusCode2 = 0 #ok
@@ -286,6 +300,9 @@ class ConnectedDrive(object):
 
     def get_car_service_partner(self):
         """Get servicepartner data from BMW Connected Drive."""
+        
+        self.token_valid()  # Check if current token is still valid
+        
         headers = {"Content-Type": "application/json", "User-agent": USER_AGENT, "Authorization" : "Bearer "+ self.accesstoken}
 
         execStatusCode3 = 0 #ok
@@ -321,6 +338,8 @@ class ConnectedDrive(object):
         # climate:      RCN
 
         #https://www.bmw-connecteddrive.de/api/vehicle/remoteservices/v1/WBYxxxxxxxx123456/history
+
+        self.token_valid()  # Check if current token is still valid
 
         MAX_RETRIES = 9
         INTERVAL = 10 #secs
