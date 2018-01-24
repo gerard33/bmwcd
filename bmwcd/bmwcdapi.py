@@ -94,7 +94,7 @@ class ConnectedDrive(object):
         self.bmw_password = password
         self.bmw_vin = vin
         self.car_name = car_name
-        self.update_interval = update_interval * 60
+        self.update_interval = update_interval * 60 # Change to seconds
         self.last_update_time = 0
         self.bmw_url = 'https://{}/api/vehicle'.format(url)
         self.accesstoken = None             #"AccessToken [%s]"
@@ -114,27 +114,36 @@ class ConnectedDrive(object):
         
         cur_time = time.time()
 
-        with self._lock:
-            if cur_time - self.last_update_time > self.update_interval:
-                # Get new data
-                result = self.get_car_data()
-                # Update the new time
-                self.last_update_time = time.time()
-                _LOGGER.error("%s: data retrieved from car", self.car_name) ### nog aanpassen naar debug of info
-                return result
+        # with self._lock:
+        #     if cur_time - self.last_update_time > self.update_interval:
+        #         # Get new data
+        #         result = self.get_car_data()
+        #         # Update the new time
+        #         self.last_update_time = time.time()
+        #         _LOGGER.error("%s: data retrieved from car", self.car_name) ### nog aanpassen naar debug of info
+        #         return result
             
-            _LOGGER.debug("%s: no data retrieved from car", self.car_name)
-            return False
+        #     _LOGGER.debug("%s: no data retrieved from car", self.car_name)
+        #     return False
+        if cur_time - self.last_update_time > self.update_interval:
+            # Update the new time
+            self.last_update_time = time.time()
+            _LOGGER.error("%s: data retrieved from car", self.car_name) ### nog aanpassen naar debug of info
+            return True
+            
+        _LOGGER.debug("%s: no data retrieved from car", self.car_name)
+        return False
+
 
     def token_valid(self):
         """Check if token is still valid, if not make new token."""
         cur_time = time.time()
         if int(cur_time) >= int(self.token_expires):     ### nog aanpassen self.token_expires == 0 kan weg, want 2e deel is altijd waar is waarde == 0
             self.generate_credentials()
-            _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s expires at: %s)",
+            _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s expires at: %s UTC)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
         else:
-            _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s expires at: %s)",
+            _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s expires at: %s UTC)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
 
     def generate_credentials(self):
@@ -184,10 +193,17 @@ class ConnectedDrive(object):
     # def ohGetValue(self, item):
     #     return requests.get('http://' + OPENHABIP + '/rest/items/'+ item)
 
-    def get_car_data(self):
+    def get_car_data(self, check_interval=True):
         """Get data from BMW Connected Drive."""
         
         self.token_valid()  # Check if current token is still valid
+        check_interval_now = check_interval
+
+        # Check for time interval to see if data can be retrieved again
+        ### NOG VERDER TOELICHTEN
+        if check_interval_now:
+            if not self.update():
+                return False
 
         headers = {"Content-Type": "application/json", "User-agent": USER_AGENT, "Authorization" : "Bearer "+ self.accesstoken}
 
