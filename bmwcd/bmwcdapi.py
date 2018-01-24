@@ -105,6 +105,7 @@ class ConnectedDrive(object):
 
         if int(time.time()) >= int(self.token_expires):
             self.generate_credentials()
+            ### hier self.token_valid()
 
     def update(self):
         """ Simple BMW ConnectedDrive API.
@@ -130,10 +131,10 @@ class ConnectedDrive(object):
         cur_time = time.time()
         if int(cur_time) >= int(self.token_expires):     ### nog aanpassen self.token_expires == 0 kan weg, want 2e deel is altijd waar is waarde == 0
             self.generate_credentials()
-            _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s, expires at: %d)",
+            _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s expires at: %s)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
         else:
-            _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s, expires at: %d)",
+            _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s expires at: %s)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
 
     def generate_credentials(self):
