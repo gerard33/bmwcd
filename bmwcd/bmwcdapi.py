@@ -99,7 +99,7 @@ class ConnectedDrive(object):
         self.bmw_url = 'https://{}/api/vehicle'.format(url)
         self.accesstoken = None             #"AccessToken [%s]"
         self.token_expires = 0              #"TokenExpires [%s]"    ### Wordt blijkbaar opgeslagen, nakijken of ik dat ook ergens moet doen
-        self.token_expires_date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(self.token_expires))
+        self.token_expires_date_time = 0
 
         ###!!! NOG NAKIJKEN HOE TOKEN OPGESLAGEN WORDT https://github.com/frankjoke/ioBroker.bmw/blob/master/connectedDrive.js
 
@@ -173,6 +173,8 @@ class ConnectedDrive(object):
         self.token_expires = int(time.time()) + int(m.group(3))
         #print("token expires in: " + str(self.token_expires))
         ###self.ohPutValue('Bmw_tokenExpires',self.token_expires)
+
+        self.token_expires_date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(self.token_expires))
 
     # def ohPutValue(self, item, value):
     #     rc =requests.put('http://' + OPENHABIP + '/rest/items/'+ item +'/state', str(value))
