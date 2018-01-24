@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# 
+#
 # **** bmwcdapi.py ****
 # https://github.com/jupe76/bmwcdapi
 #
@@ -33,8 +33,10 @@ import re
 import argparse
 import xml.etree.ElementTree as etree
 
+###TIMEOUT toevoegen, zie https://github.com/RiRomain/python-mercedes-api/blob/master/mercedesapi/__init__.py
+
 ### TO DO
-### Meerdere auto's ondersteunen
+### Meerdere auto's ondersteunen --> hoeft niet want ondersteund BMW ConnectedDrive niet via API
 
 ### OPTIES
 ### API URLs = "efficiency, dynamic, navigation, remote_execution, remote_chargingprofile, remote_history, servicepartner, service, specs";
@@ -108,9 +110,12 @@ class ConnectedDrive(object):
         """
         
         cur_time = time.time()
+
         with self._lock:
             if cur_time - self.last_update_time > self.update_interval:
+                # Get new data
                 result = self.get_car_data()
+                # Update the new time
                 self.last_update_time = time.time()
                 _LOGGER.error("Data retrieved from car") ### nog aanpassen naar debug of info
                 return result
@@ -165,6 +170,13 @@ class ConnectedDrive(object):
 
     def get_car_data(self):
         """Get data from BMW Connected Drive."""
+        
+        if self.token_expires == 0 or int(cur_time) >= int(self.token_expires):
+            self.generate_credentials()
+            _LOGGER.error("New credentials from BMW Connected Drive API, token: %s, expires in: %d", self.accesstoken, self.token_expires) ### nog aanpassen naar debug of info
+        else:
+            _LOGGER.error("Current credentials from BMW Connected Drive API still valid, token: %s, expires in: %d", self.accesstoken, self.token_expires) ### nog aanpassen naar debug of info
+        
         headers = {"Content-Type": "application/json", "User-agent": USER_AGENT, "Authorization" : "Bearer "+ self.accesstoken}
 
         execStatusCode = 0 #ok
@@ -173,10 +185,13 @@ class ConnectedDrive(object):
         if data_response.status_code == 200:
             ###if map is not None and not map.get('error'):
             ###NOG CONTROLE OP VOLLEDIGHEID TOEVOEGEN
+            
+            ###map_car_data = {}, zodat dict.get() ook zeker goed werkt
+            ### en nog als self toevoegen?
             map_car_data = data_response.json()['attributesMap']  #attributesMap, vehicleMessages, niet werkend: cbsMessages, twoTimeTimer, characteristicList, lifeTimeList, lastTripList
 
             #optional print all values
-            if self.printall == True:
+            if self.printall:
                 print('--------------START CAR DATA--------------')
                 for key in sorted(map_car_data):
                     print("%s: %s" % (key, map_car_data[key]))
@@ -208,7 +223,7 @@ class ConnectedDrive(object):
             map_car_navigation = navigation_response.json()
 
             #optional print all values
-            if self.printall == True:
+            if self.printall:
                 print('--------------START CAR NAV--------------')
                 for key in sorted(map_car_navigation):
                     print("%s: %s" % (key, map_car_navigation[key]))
@@ -237,7 +252,7 @@ class ConnectedDrive(object):
         if efficiency_response.status_code == 200:
             map_car_efficiency = efficiency_response.json()
             
-            if self.printall == True:
+            if self.printall:
                 print('--------------START CAR EFFICIENCY--------------')
                 for key in sorted(map_car_efficiency):
                     print("%s: %s" % (key, map_car_efficiency[key]))
@@ -279,7 +294,7 @@ class ConnectedDrive(object):
             map_car_service_partner = service_partner_response.json()
             my_dealer = service_partner_response.json()["dealer"]
 
-            if self.printall == True:
+            if self.printall:
                 print('--------------START CAR SERVICEPARTNER--------------')
                 #for key in sorted(map_car_service_partner):
                 #    print("%s: %s" % (key, map_car_service_partner[key]))
@@ -365,7 +380,7 @@ def main():
                         action='store', help='execute service like instant climate control')
     args = vars(parser.parse_args())
 
-    if args["printall"] == True:
+    if args["printall"]:
         c.printall = True
 
     # dont query data and execute the service at the same time, takes too long
