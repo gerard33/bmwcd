@@ -101,6 +101,7 @@ class ConnectedDrive(object):
         self.token_expires = 0              #"TokenExpires [%s]"    ### Wordt blijkbaar opgeslagen, nakijken of ik dat ook ergens moet doen
         self.token_expires_date_time = 0
         self.ignore_interval = None
+        self.map_car_data = {}
 
         ###!!! NOG NAKIJKEN HOE TOKEN OPGESLAGEN WORDT https://github.com/frankjoke/ioBroker.bmw/blob/master/connectedDrive.js
 
@@ -108,6 +109,7 @@ class ConnectedDrive(object):
         #    self.generate_credentials()
             ### hier self.token_valid()
         
+        ### Initieel opstarten om data in te laten lezen
         self.get_car_data()
 
     def update(self):
@@ -117,25 +119,26 @@ class ConnectedDrive(object):
         
         cur_time = time.time()
 
-        # with self._lock:
-        #     if cur_time - self.last_update_time > self.update_interval:
-        #         # Get new data
-        #         result = self.get_car_data()
-        #         # Update the new time
-        #         self.last_update_time = time.time()
-        #         _LOGGER.info("%s: data retrieved from car", self.car_name) ### nog aanpassen naar debug of info
-        #         return result
+        with self._lock:
+            if cur_time - self.last_update_time > self.update_interval:
+                # Get new data
+                result = self.get_car_data()
+                # Update the new time
+                self.last_update_time = time.time()
+                _LOGGER.error("%s: data retrieved from car", self.car_name) ### nog aanpassen naar debug of info
+                return result
             
-        #     _LOGGER.debug("%s: no data retrieved from car", self.car_name)
-        #     return False
-        if cur_time - self.last_update_time > self.update_interval:
-            # Update the new time
-            self.last_update_time = time.time()
-            _LOGGER.info("%s: going to collect data from car", self.car_name) ### nog aanpassen naar debug of info
-            return True
+            _LOGGER.debug("%s: no data retrieved from car", self.car_name)
+            return False
+
+        # if cur_time - self.last_update_time > self.update_interval:
+        #     # Update the new time
+        #     self.last_update_time = time.time()
+        #     _LOGGER.error("%s: going to collect data from car", self.car_name) ### nog aanpassen naar debug of info
+        #     return True
             
-        _LOGGER.info("%s: not going to collect data from car", self.car_name)
-        return False
+        # _LOGGER.error("%s: not going to collect data from car", self.car_name)
+        # return False
 
 
     def token_valid(self):
@@ -143,10 +146,10 @@ class ConnectedDrive(object):
         cur_time = time.time()
         if int(cur_time) >= int(self.token_expires):     ### nog aanpassen self.token_expires == 0 kan weg, want 2e deel is altijd waar is waarde == 0
             self.generate_credentials()
-            _LOGGER.info("%s: new credentials from BMW Connected Drive API (token: %s expires at: %s UTC)",
+            _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s expires at: %s UTC)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
         else:
-            _LOGGER.info("%s: current credentials from BMW Connected Drive API still valid (token: %s expires at: %s UTC)",
+            _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s expires at: %s UTC)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
 
     def generate_credentials(self):
@@ -196,18 +199,18 @@ class ConnectedDrive(object):
     # def ohGetValue(self, item):
     #     return requests.get('http://' + OPENHABIP + '/rest/items/'+ item)
 
-    def get_car_data(self, ignore_interval=True):
+    def get_car_data(self): ###, ignore_interval=True):
         """Get data from BMW Connected Drive."""
         
-        self.ignore_interval = ignore_interval
+        ###self.ignore_interval = ignore_interval
 
         self.token_valid()  # Check if current token is still valid
         
         # Check for time interval to see if data can be retrieved again
         ### NOG VERDER TOELICHTEN
-        if not self.ignore_interval:
-            if not self.update():
-                return False
+        # if not self.ignore_interval:
+        #     if not self.update():
+        #         return False
 
         ### LOCK NOG TOEPASSEN?
         ### with self._lock:
@@ -222,17 +225,17 @@ class ConnectedDrive(object):
             
             ###map_car_data = {}, zodat dict.get() ook zeker goed werkt
             ### en nog als self toevoegen?
-            map_car_data = data_response.json()['attributesMap']  #attributesMap, vehicleMessages, niet werkend: cbsMessages, twoTimeTimer, characteristicList, lifeTimeList, lastTripList
+            self.map_car_data = data_response.json()['attributesMap']  #attributesMap, vehicleMessages, niet werkend: cbsMessages, twoTimeTimer, characteristicList, lifeTimeList, lastTripList
 
             #optional print all values
             if self.printall:
                 print('--------------START CAR DATA--------------')
-                for key in sorted(map_car_data):
-                    print("%s: %s" % (key, map_car_data[key]))
+                for key in sorted(self.map_car_data):
+                    print("%s: %s" % (key, self.map_car_data[key]))
                 #print(json.dumps(map_car_data, sort_keys=True, indent=4))
                 print('--------------END CAR DATA--------------')
 
-            #print(type(map_car_data)) #is het een dict?
+            #print(type(self.map_car_data)) #is het een dict?
                 
         else :
             print('Error with get_car_data')
@@ -244,7 +247,7 @@ class ConnectedDrive(object):
             execStatusCode = 70 #errno ECOMM, Communication error on send
             return False ###
 
-        return map_car_data
+        return self.map_car_data
 
     def get_car_navigation(self):
         """Get navigation data from BMW Connected Drive."""
