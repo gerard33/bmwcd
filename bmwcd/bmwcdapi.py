@@ -104,9 +104,11 @@ class ConnectedDrive(object):
 
         ###!!! NOG NAKIJKEN HOE TOKEN OPGESLAGEN WORDT https://github.com/frankjoke/ioBroker.bmw/blob/master/connectedDrive.js
 
-        if int(time.time()) >= int(self.token_expires):
-            self.generate_credentials()
+        #if int(time.time()) >= int(self.token_expires):
+        #    self.generate_credentials()
             ### hier self.token_valid()
+        
+        self.get_car_data()
 
     def update(self):
         """ Simple BMW ConnectedDrive API.
@@ -197,9 +199,10 @@ class ConnectedDrive(object):
     def get_car_data(self, ignore_interval=True):
         """Get data from BMW Connected Drive."""
         
-        self.token_valid()  # Check if current token is still valid
         self.ignore_interval = ignore_interval
 
+        self.token_valid()  # Check if current token is still valid
+        
         # Check for time interval to see if data can be retrieved again
         ### NOG VERDER TOELICHTEN
         if not self.ignore_interval:
