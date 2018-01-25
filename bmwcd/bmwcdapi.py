@@ -127,9 +127,10 @@ class ConnectedDrive(object):
                 self.last_update_time = time.time()
                 _LOGGER.error("%s: data collected from car", self.car_name) ### nog aanpassen naar debug of info
                 _LOGGER.error("Result: %s", result) ### nog aanpassen naar debug of info
+                _LOGGER.error("map_car_data: %s", self.map_car_data) ### nog aanpassen naar debug of info
                 return result
             
-            _LOGGER.error("%s: no data collected from car", self.car_name)
+            _LOGGER.debug("%s: no data collected from car", self.car_name)
             return False
 
         # if cur_time - self.last_update_time > self.update_interval:
@@ -147,7 +148,7 @@ class ConnectedDrive(object):
         cur_time = time.time()
         if int(cur_time) >= int(self.token_expires):     ### nog aanpassen self.token_expires == 0 kan weg, want 2e deel is altijd waar is waarde == 0
             self.generate_credentials()
-            _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s expires at: %s UTC)",
+            _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s expires at: %s)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
         else:
             _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s expires at: %s UTC)",
@@ -190,7 +191,7 @@ class ConnectedDrive(object):
         #print("token expires in: " + str(self.token_expires))
         ###self.ohPutValue('Bmw_tokenExpires',self.token_expires)
 
-        self.token_expires_date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(self.token_expires))
+        self.token_expires_date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.token_expires))
 
     # def ohPutValue(self, item, value):
     #     rc =requests.put('http://' + OPENHABIP + '/rest/items/'+ item +'/state', str(value))
