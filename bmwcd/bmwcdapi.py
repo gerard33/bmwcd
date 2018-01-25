@@ -125,10 +125,11 @@ class ConnectedDrive(object):
                 result = self.get_car_data()
                 # Update the new time
                 self.last_update_time = time.time()
-                _LOGGER.error("%s: data retrieved from car", self.car_name) ### nog aanpassen naar debug of info
+                _LOGGER.error("%s: data collected from car", self.car_name) ### nog aanpassen naar debug of info
+                _LOGGER.error("Result: %s", result) ### nog aanpassen naar debug of info
                 return result
             
-            _LOGGER.debug("%s: no data retrieved from car", self.car_name)
+            _LOGGER.error("%s: no data collected from car", self.car_name)
             return False
 
         # if cur_time - self.last_update_time > self.update_interval:
@@ -162,14 +163,14 @@ class ConnectedDrive(object):
         }
 
         values = {'username' : self.bmw_username,
-            'password' : self.bmw_password,
-            'client_id' : 'dbf0a542-ebd1-4ff0-a9a7-55172fbfce35',
-            'redirect_uri' : 'https://www.bmw-connecteddrive.com/app/default/static/external-dispatch.html',
-            'response_type' : 'token',
-            'scope' : 'authenticate_user fupo',
-            'state' : 'eyJtYXJrZXQiOiJkZSIsImxhbmd1YWdlIjoiZGUiLCJkZXN0aW5hdGlvbiI6ImxhbmRpbmdQYWdlIn0',
-            'locale' : 'DE-de' ### NOG AANPASSEN?
-        }
+                  'password' : self.bmw_password,
+                  'client_id' : 'dbf0a542-ebd1-4ff0-a9a7-55172fbfce35',
+                  'redirect_uri' : 'https://www.bmw-connecteddrive.com/app/default/static/external-dispatch.html',
+                  'response_type' : 'token',
+                  'scope' : 'authenticate_user fupo',
+                  'state' : 'eyJtYXJrZXQiOiJkZSIsImxhbmd1YWdlIjoiZGUiLCJkZXN0aW5hdGlvbiI6ImxhbmRpbmdQYWdlIn0',
+                  'locale' : 'DE-de' ### NOG AANPASSEN?
+                 }
 
         data = urllib.parse.urlencode(values)
         credentials_response = requests.post(AUTH_API, data=data, headers=headers, allow_redirects=False)
