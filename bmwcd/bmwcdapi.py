@@ -100,6 +100,7 @@ class ConnectedDrive(object):
         self.accesstoken = None             #"AccessToken [%s]"
         self.token_expires = 0              #"TokenExpires [%s]"    ### Wordt blijkbaar opgeslagen, nakijken of ik dat ook ergens moet doen
         self.token_expires_date_time = 0
+        self.ignore_interval = None
 
         ###!!! NOG NAKIJKEN HOE TOKEN OPGESLAGEN WORDT https://github.com/frankjoke/ioBroker.bmw/blob/master/connectedDrive.js
 
@@ -197,11 +198,11 @@ class ConnectedDrive(object):
         """Get data from BMW Connected Drive."""
         
         self.token_valid()  # Check if current token is still valid
-        #ignore_interval = check_interval
+        self.ignore_interval = ignore_interval
 
         # Check for time interval to see if data can be retrieved again
         ### NOG VERDER TOELICHTEN
-        if not ignore_interval:
+        if not self.ignore_interval:
             if not self.update():
                 return False
 
