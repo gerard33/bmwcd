@@ -97,6 +97,7 @@ class ConnectedDrive(object):
         self.update_interval = update_interval * 60 # Change to seconds
         self.is_valid_session = False
         self.last_update_time = 0
+        self.is_updated = False
         self.bmw_url = 'https://{}/api/vehicle'.format(url)
         self.accesstoken = None             #"AccessToken [%s]"
         self.token_expires = 0              #"TokenExpires [%s]"    ### Wordt blijkbaar opgeslagen, nakijken of ik dat ook ergens moet doen
@@ -133,9 +134,11 @@ class ConnectedDrive(object):
                 _LOGGER.error("%s: data collected from car", self.car_name) ### nog aanpassen naar debug of info
                 _LOGGER.error("Result: %s", result) ### nog aanpassen naar debug of info
                 _LOGGER.error("map_car_data: %s", self.map_car_data) ### nog aanpassen naar debug of info
+                self.is_updated = True
                 return result
             
             _LOGGER.debug("%s: no data collected from car", self.car_name)
+            self.is_updated = False
             return False
 
         # if cur_time - self.last_update_time > self.update_interval:
