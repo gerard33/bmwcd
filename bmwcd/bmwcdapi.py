@@ -95,6 +95,7 @@ class ConnectedDrive(object):
         self.bmw_vin = vin
         self.car_name = car_name
         self.update_interval = update_interval * 60 # Change to seconds
+        self.is_valid_session = False
         self.last_update_time = 0
         self.bmw_url = 'https://{}/api/vehicle'.format(url)
         self.accesstoken = None             #"AccessToken [%s]"
@@ -110,7 +111,11 @@ class ConnectedDrive(object):
             ### hier self.token_valid()
         
         ### Initieel opstarten om data in te laten lezen
-        self.get_car_data()
+        # Eerst credentials aanmaken
+        self.generate_credentials()
+        # Als dat gelukt is dan de data ophalen
+        if self.is_valid_session:
+            self.get_car_data()
 
     def update(self):
         """ Simple BMW ConnectedDrive API.
@@ -151,7 +156,7 @@ class ConnectedDrive(object):
             _LOGGER.error("%s: new credentials from BMW Connected Drive API (token: %s expires at: %s)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
         else:
-            _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s expires at: %s UTC)",
+            _LOGGER.error("%s: current credentials from BMW Connected Drive API still valid (token: %s expires at: %s)",
                           self.car_name, self.accesstoken, self.token_expires_date_time) ### nog aanpassen naar debug of info
 
     def generate_credentials(self):
@@ -192,6 +197,11 @@ class ConnectedDrive(object):
         ###self.ohPutValue('Bmw_tokenExpires',self.token_expires)
 
         self.token_expires_date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.token_expires))
+
+        if self.accesstoken:
+            self.is_valid_session = True
+        else:
+            self.is_valid_session = False
 
     # def ohPutValue(self, item, value):
     #     rc =requests.put('http://' + OPENHABIP + '/rest/items/'+ item +'/state', str(value))
