@@ -45,7 +45,7 @@ from multiprocessing import RLock
 from datetime import datetime
 import requests
 from requests.exceptions import HTTPError
-from bmwcdapi import Exceptions as BMWException
+from bmwcd import Exceptions as BMWException
 #from Exceptions import BMWConnectedDriveException as BMWException
 
 root = logging.getLogger()
