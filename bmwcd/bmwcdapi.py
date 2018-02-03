@@ -1,6 +1,4 @@
-#! /usr/bin/env python3
 """ BMW ConnectedDrive API
-
 Attributes:
     username (int): BMW ConnectedDrive username (email)
     password (string): BMW ConnectedDrive password
@@ -47,8 +45,8 @@ from multiprocessing import RLock
 from datetime import datetime
 import requests
 from requests.exceptions import HTTPError
-#from bmwcdapi import Exceptions as BMWException
-from Exceptions import BMWConnectedDriveException as BMWException
+from bmwcdapi import Exceptions as BMWException
+#from Exceptions import BMWConnectedDriveException as BMWException
 
 root = logging.getLogger()
 root.setLevel(logging.INFO)
