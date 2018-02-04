@@ -62,6 +62,8 @@ root.addHandler(ch)
 # Enter the data below between quotes to be able to run the script from CLI
 USERNAME = None         # Your BMW ConnectedDrive username
 PASSWORD = None         # Your BMW ConnectedDrive password
+#############################################################################################################################
+# Optional data below
 VIN = None              # 17 chars Vehicle Identification Number (VIN) of the car, check the app of BMW ConnectedDrive Online
 URL = None              # URL without 'https://' to login to BMW ConnectedDrive, e.g. 'www.bmw-connecteddrive.nl'
 CAR_NAME = None         # This is the name of your car
@@ -229,17 +231,22 @@ class ConnectedDrive(object):
                                      headers=headers,
                                      allow_redirects=True) ###Timeout
         
-        try:
-            _LOGGER.debug("BMW ConnectedDrive API: connect to URL %s", url)
-            data_response.raise_for_status()
-        except HTTPError as error_message:  # Whoops it wasn't a 200
-            _LOGGER.debug("Error code: %s (%s)", error_message.response.status_code, error_message)
-            raise BMWException(error_message.response.status_code)
-
-        if data_type == 'dynamic' or data_type == 'servicepartner':
-            return data_response.json()[sub_data_type]
+        # try:
+        #     _LOGGER.debug("BMW ConnectedDrive API: connect to URL %s", url)
+        #     data_response.raise_for_status()
+        # except HTTPError as error_message:  # Whoops it wasn't a 200
+        #     _LOGGER.debug("Error code: %s (%s)", error_message.response.status_code, error_message)
+        #     raise BMWException(error_message.response.status_code)
+        if data_response.status_code == 200:
+            _LOGGER.info("BMW ConnectedDrive API: connect to URL %s", url)
+            if data_type == 'dynamic' or data_type == 'servicepartner':
+                return data_response.json()[sub_data_type]
+            else:
+                return data_response.json()
         else:
-            return data_response.json()
+            _LOGGER.error("Error code: %s", data_response.status_code) ### Status melding nog toevoegen
+        
+        return data_response.status_code
     
     def get_car_data(self, vin=None):
         """Get car data from BMW Connected Drive."""
