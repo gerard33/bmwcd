@@ -206,7 +206,7 @@ class ConnectedDrive(object):
             self.is_valid_session = True
         return
 
-    def request_car_data(self, data_type, sub_data_type=None):
+    def request_car_data(self, data_type, sub_data_type=None, vin=None):
         """Get data from BMW Connected Drive."""
         headers = {
             'Content-Type': 'application/json',
@@ -215,6 +215,8 @@ class ConnectedDrive(object):
         }
 
         self.token_valid()  # Check if current token is still valid
+        if vin is not None:
+            self.bmw_vin = vin
 
         if data_type == 'dynamic':
             url = '{}/{}/v1/{}?offset={}'.format(self.bmw_url, data_type, self.bmw_vin, str(self.utc_offset_min))
@@ -239,10 +241,10 @@ class ConnectedDrive(object):
         else:
             return data_response.json()
     
-    def get_car_data(self):
+    def get_car_data(self, vin=None):
         """Get car data from BMW Connected Drive."""
         
-        self.map_car_data = self.request_car_data('dynamic', 'attributesMap')
+        self.map_car_data = self.request_car_data('dynamic', 'attributesMap', vin)
 
         # if self.printall:
         #     _LOGGER.info('--------------START CAR DATA--------------')
