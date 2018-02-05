@@ -46,7 +46,7 @@ from multiprocessing import RLock
 from datetime import datetime
 import requests
 from requests.exceptions import HTTPError
-from bmwcd import Exceptions as BMWException
+#from bmwcd import Exceptions as BMWException
 #from Exceptions import BMWConnectedDriveException as BMWException
 
 root = logging.getLogger()
@@ -67,7 +67,7 @@ PASSWORD = None         # Your BMW ConnectedDrive password
 VIN = None              # 17 chars Vehicle Identification Number (VIN) of the car, check the app of BMW ConnectedDrive Online
 URL = None              # URL without 'https://' to login to BMW ConnectedDrive, e.g. 'www.bmw-connecteddrive.nl'
 CAR_NAME = None         # This is the name of your car
-UPDATE_INTERVAL = 10    # The interval in minutes to check the API, don't hammer it, default is 30 mins, minimum is 10 mins
+UPDATE_INTERVAL = 1     # The interval in minutes to check the API, don't hammer it, default is 30 mins, minimum is 10 mins
 #############################################################################################################################
 
 _LOGGER = logging.getLogger(__name__)
@@ -119,7 +119,7 @@ class ConnectedDrive(object):
         self.map_car_data = {}
 
         self.utc_offset_min = int(round((datetime.utcnow() - datetime.now()).total_seconds()) / 60)
-        _LOGGER.debug("UTC offset: %s minutes", self.utc_offset_min)
+        _LOGGER.debug("BMW ConnectedDrive API - UTC offset: %s minutes", self.utc_offset_min)
       
         self.generate_credentials() # Get credentials
         if self.is_valid_session:   # Get data
@@ -142,7 +142,7 @@ class ConnectedDrive(object):
                     self.cars_data.append(self.map_car_data)    # Make a list for every car
                     #self.cars_data.append({'vin': 'WDF546'})    # Test for a second car
                     _LOGGER.info("BMW ConnectedDrive API: data collected from %s", self.car_name)
-                _LOGGER.debug("map_car_data: %s", self.cars_data)
+                _LOGGER.debug("BMW ConnectedDrive API - map_car_data: %s", self.cars_data)
                 self.last_update_time = time.time()
                 self.is_updated = True
                 
@@ -235,8 +235,9 @@ class ConnectedDrive(object):
         #     _LOGGER.debug("BMW ConnectedDrive API: connect to URL %s", url)
         #     data_response.raise_for_status()
         # except HTTPError as error_message:  # Whoops it wasn't a 200
-        #     _LOGGER.debug("Error code: %s (%s)", error_message.response.status_code, error_message)
+        #     _LOGGER.debug("BMW ConnectedDrive API - error code: %s (%s)", error_message.response.status_code, error_message)
         #     raise BMWException(error_message.response.status_code)
+        
         if data_response.status_code == 200:
             _LOGGER.info("BMW ConnectedDrive API: connect to URL %s", url)
             if data_type == 'dynamic' or data_type == 'servicepartner':
@@ -244,9 +245,11 @@ class ConnectedDrive(object):
             else:
                 return data_response.json()
         else:
-            _LOGGER.error("Error code: %s", data_response.status_code) ### Status melding nog toevoegen
+            _LOGGER.error("BMW ConnectedDrive API: error code: %s while getting data", data_response.status_code) ### Status melding nog toevoegen
+            
+        return False     ### None of False
         
-        return data_response.status_code
+        ###return data_response.status_code
     
     def get_car_data(self, vin=None):
         """Get car data from BMW Connected Drive."""
@@ -266,9 +269,9 @@ class ConnectedDrive(object):
         """Get car data from BMW Connected Drive."""
         
         self.cars = self.request_car_data('get_cars')
+        ###AANPASSEN NAAR NETTE MELDING IN LOG, INCL REFERENTIE NAAR API
         for car in self.cars:
-            _LOGGER.info("Car: %s %s", car['brand'], car['modelName'])
-            _LOGGER.info("Vin: %s", car['vin'])
+            _LOGGER.info("BMW ConnectedDrive API - Car: %s %s, Vin: %s", car['brand'], car['modelName'], car['vin'])
 
         if self.printall:
             _LOGGER.info('--------------START CARS--------------')
@@ -357,7 +360,7 @@ class ConnectedDrive(object):
             "Authorization" : "Bearer "+ self.accesstoken
         }
 
-        _LOGGER.info("Executing service %s", service)
+        _LOGGER.info("BMW ConnectedDrive API - executing service %s", service)
         command = service_codes[service]
         remote_service_status = None
         url = '{}/remoteservices/v1/{}/{}'.format(self.bmw_url, self.bmw_vin, command)
@@ -368,7 +371,7 @@ class ConnectedDrive(object):
                                          allow_redirects=True)
 
         if execute_response.status_code != 200:
-            _LOGGER.error("Error during executing service %s", service)
+            _LOGGER.error("BMW ConnectedDrive API - error during executing service %s", service)
             return False
 
         for i in range(max_retries):
@@ -376,16 +379,16 @@ class ConnectedDrive(object):
             remoteservices_response = requests.get(url_check,
                                                    headers=headers,
                                                    allow_redirects=True)
-            _LOGGER.debug("Status execstate %s %s", str(remoteservices_response.status_code), remoteservices_response.text)
+            _LOGGER.debug("BMW ConnectedDrive API - status execstate %s %s", str(remoteservices_response.status_code), remoteservices_response.text)
             root_data = etree.fromstring(remoteservices_response.text)
             remote_service_status = root_data.find('remoteServiceStatus').text
             #print(remoteServiceStatus)
             if remote_service_status == 'EXECUTED':
-                _LOGGER.info("Executing service %s succeeded", service)
+                _LOGGER.info("BMW ConnectedDrive API - executing service %s succeeded", service)
                 break
 
         if remote_service_status != 'EXECUTED':
-            _LOGGER.error("Error during executing service %s, timer expired", service)
+            _LOGGER.error("BMW ConnectedDrive API - error during executing service %s, timer expired", service)
             return False
 
         return True
