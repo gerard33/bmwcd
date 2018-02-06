@@ -66,7 +66,7 @@ PASSWORD = None         # Your BMW ConnectedDrive password
 # Optional data below
 VIN = None              # 17 chars Vehicle Identification Number (VIN) of the car, check the app of BMW ConnectedDrive Online
 URL = None              # URL without 'https://' to login to BMW ConnectedDrive, e.g. 'www.bmw-connecteddrive.nl'
-CAR_NAME = None         # This is the name of your car
+CAR_NAME = 'Your BMW'   # This is the name of your car
 UPDATE_INTERVAL = 1     # The interval in minutes to check the API, don't hammer it, default is 30 mins, minimum is 10 mins
 #############################################################################################################################
 
@@ -104,8 +104,8 @@ class ConnectedDrive(object):
         self.last_update_time = 0
         self.is_updated = False
         if url is None:
-            self.bmw_url = 'https://www.bmw-connecteddrive.de/api/vehicle'
-            self.bmw_url_me = 'https://www.bmw-connecteddrive.de/api/me'
+            self.bmw_url = 'https://www.bmw-connecteddrive.nl/api/vehicle'
+            self.bmw_url_me = 'https://www.bmw-connecteddrive.nl/api/me'
         else:
             self.bmw_url = 'https://{}/api/vehicle'.format(url)
             self.bmw_url_me = 'https://{}/api/me'.format(url)
@@ -132,17 +132,19 @@ class ConnectedDrive(object):
         cur_time = time.time()
         with self._lock:
             if cur_time - self.last_update_time > self.update_interval:
-                self.get_cars()                     # Get a list with the registered cars
-                for car in self.cars:               # Multiple cars can be registered for a single user
-                    self.bmw_vin = car['vin']       # Get the VIN
+                self.cars_data = []                                 # Make the list empty before loading the new data
+                self.get_cars()                                     # Get a list with the registered cars
+                for car in self.cars:                               # Multiple cars can be registered for a single user
+                    if self.bmw_vin is None:
+                        self.bmw_vin = car['vin']                   # Get the VIN
                     self.car_name = '{} {}'.format(car['brand'], car['modelName'])
-                    self.get_car_data()             # Get data
-                    self.map_car_data['vin'] = self.bmw_vin         # Add VIN to dict
+                    self.get_car_data(self.bmw_vin)                 # Get data for this vin
+                    self.map_car_data['vin'] = self.bmw_vin         # Add VIN to dict           @jaapvee
                     self.map_car_data['car_name'] = self.car_name   # Add car name to dict
-                    self.cars_data.append(self.map_car_data)    # Make a list for every car
-                    #self.cars_data.append({'vin': 'WDF546'})    # Test for a second car
+                    self.cars_data.append(self.map_car_data)        # Make a list for every car
+                    #self.cars_data.append({'vin': 'WDF546'})       # Test for a second car
                     _LOGGER.info("BMW ConnectedDrive API: data collected from %s", self.car_name)
-                _LOGGER.debug("BMW ConnectedDrive API - map_car_data: %s", self.cars_data)
+                _LOGGER.error("BMW ConnectedDrive API - map_car_data: %s", self.cars_data)  ### debug
                 self.last_update_time = time.time()
                 self.is_updated = True
                 
