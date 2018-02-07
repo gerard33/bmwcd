@@ -113,7 +113,6 @@ class ConnectedDrive(object):
         self.utc_offset_min = 0
         self.ignore_interval = None
         self.cars = []
-        self.cars_data = []
         self.map_car_data = {}
 
         self.utc_offset_min = int(round((datetime.utcnow() - datetime.now()).total_seconds()) / 60)
@@ -121,6 +120,7 @@ class ConnectedDrive(object):
       
         self.generate_credentials() # Get credentials
         if self.is_valid_session:   # Get data
+            self.get_cars()                                     # Get a list with the registered cars
             self.update()
 
     def update(self):
@@ -131,17 +131,17 @@ class ConnectedDrive(object):
         ###with self._lock:
         ### Bovenstaande aan, dan hieronder inspringen
         if cur_time - self.last_update_time > self.update_interval:
-            self.cars_data = []                                 # Make the list empty before loading the new data
-            self.get_cars()                                     # Get a list with the registered cars
+            self.cars_data = []                                 # Make the list before loading the new data
             for car in self.cars:                               # Multiple cars can be registered for a single user
-                self.bmw_vin = car['vin']                       # Get the VIN
-                self.car_name = '{} {}'.format(car['brand'], car['modelName'])
-                self.get_car_data(self.bmw_vin)                 # Get data for this vin
-                self.map_car_data['vin'] = self.bmw_vin         # Add VIN to dict           @jaapvee
-                self.map_car_data['car_name'] = self.car_name   # Add car name to dict
-                self.cars_data.append(self.map_car_data)        # Make a list for every car
+                bmw_vin = car['vin']                            # Get the VIN
+                car_name = '{} {}'.format(car['brand'], car['modelName'])
+                car_data = self.get_car_data(bmw_vin)           # Get data for this vin
+                _LOGGER.error("BMW ConnectedDrive API: car data %s", car_data)
+                car_data['vin'] = bmw_vin                       # Add VIN to dict           
+                car_data['car_name'] = car_name                 # Add car name to dict
+                self.cars_data.append(car_data)                 # Make a list for every car
                 #self.cars_data.append({'vin': 'WDF546'})       # Test for a second car
-                _LOGGER.info("BMW ConnectedDrive API: data collected from %s", self.car_name)
+                _LOGGER.info("BMW ConnectedDrive API: data collected from %s", car_name)
             _LOGGER.error("BMW ConnectedDrive API - map_car_data: %s", self.cars_data)  ### debug
             self.last_update_time = time.time()
             self.is_updated = True
@@ -253,16 +253,9 @@ class ConnectedDrive(object):
     
     def get_car_data(self, vin):
         """Get car data from BMW Connected Drive.""" 
-        self.map_car_data = self.request_car_data('dynamic', 'attributesMap', vin)
-
-        # if self.printall:
-        #     _LOGGER.info('--------------START CAR DATA--------------')
-        #     for key in sorted(self.map_car_data):
-        #         _LOGGER.info("%s: %s", key, self.map_car_data[key])
-        #     #print(json.dumps(map_car_data, sort_keys=True, indent=4))
-        #     _LOGGER.info('--------------END CAR DATA--------------')
-
-        return self.map_car_data
+        return self.request_car_data('dynamic', 'attributesMap', vin)
+        ### VOOR DE REST OOK ZO DOEN ALS HIERBOVEN
+        ### hierboven is self.map_car_data weggehaald, gaat dat goed?
 
     def get_car_location(self, vin):
         """Get car location from BMW Connected Drive."""
