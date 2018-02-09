@@ -158,10 +158,10 @@ class ConnectedDrive(object):
                     print('--------------END CAR DATA--------------')
 
                 return self.cars_data
-
-            _LOGGER.info("BMW ConnectedDrive API: no data collected from car as interval time has not yet passed.")
-            self.is_updated = False
-            return False
+            else:
+                _LOGGER.info("BMW ConnectedDrive API: no data collected from car as interval time has not yet passed.")
+                self.is_updated = False
+                return False
 
     def token_valid(self):
         """Check if token is still valid, if not make new token."""
