@@ -3,9 +3,7 @@
 Attributes:
     username (int): BMW ConnectedDrive username (email)
     password (string): BMW ConnectedDrive password
-    vin (string): 17 chars Vehicle Identification Number (VIN) of the car, can be found in the app or on BMW ConnectedDrive online
     url(string): URL you use to login to BMW ConnectedDrive, e.g. 'www.bmw-connecteddrive.nl' or 'www.bmw-connecteddrive.de'
-    update_interval (int): update intervall in minutes
 """
 
 # **** bmw_connecteddrive.py ****
@@ -46,12 +44,10 @@ from multiprocessing import RLock
 from datetime import datetime
 import requests
 from requests.exceptions import HTTPError
-#from bmwcd import Exceptions as BMWException
-#from Exceptions import BMWConnectedDriveException as BMWException
 
+# Print logger info when started from CLI
 root = logging.getLogger()
 root.setLevel(logging.INFO)
-
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(message)s')
@@ -62,11 +58,11 @@ root.addHandler(ch)
 # Enter the data below between quotes to be able to run the script from CLI
 USERNAME = None         # Your BMW ConnectedDrive username
 PASSWORD = None         # Your BMW ConnectedDrive password
-##################################################################################################################################
+#######################################################################################################################################
 # Optional data below
 URL = None              # URL without 'https://' to login to BMW ConnectedDrive, e.g. 'www.bmw-connecteddrive.nl' which is default
-UPDATE_INTERVAL = 1     # The interval in minutes to check the API, don't hammer it, default is 30 mins, minimum is 10 mins
-##################################################################################################################################
+UPDATE_INTERVAL = 600   # The interval (sec) to check the API, don't hammer it, default is 600 sec (10 minutes), minimum is 120 seconds
+#######################################################################################################################################
 
 _LOGGER = logging.getLogger(__name__)
 TIMEOUT = 10
@@ -74,7 +70,7 @@ TIMEOUT = 10
 AUTH_API = 'https://customer.bmwgroup.com/gcdm/oauth/authenticate'
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0"
 
-###
+### Examples of the urls which can be used
 # https://www.bmw-connecteddrive.de/api/vehicle/navigation/v1/VIN
 # https://www.bmw-connecteddrive.de/api/vehicle/image/v1/VIN?startAngle=10&stepAngle=10&width=780
 # https://www.bmw-connecteddrive.de/api/vehicle/dynamic/v1/VIN?offset=-60
@@ -95,69 +91,77 @@ class ConnectedDrive(object):
         self.printall = False
         self.bmw_username = username
         self.bmw_password = password
-        self.update_interval = update_interval * 60     # From minutes to seconds
-        self.is_valid_session = False
-        self.last_update_time = 0
-        self.is_updated = False
-        self.car_name = None        
-        self.bmw_vin = None
         if url is None:
             self.bmw_url = 'https://www.bmw-connecteddrive.nl/api/vehicle'
             self.bmw_url_me = 'https://www.bmw-connecteddrive.nl/api/me'
         else:
-            self.bmw_url = 'https://{}/api/vehicle'.format(url)
-            self.bmw_url_me = 'https://{}/api/me'.format(url)
+            if url.startswith('https://'):
+                self.bmw_url = '{}/api/vehicle'.format(url)
+                self.bmw_url_me = '{}/api/me'.format(url)
+            else:
+                self.bmw_url = 'https://{}/api/vehicle'.format(url)
+                self.bmw_url_me = 'https://{}/api/me'.format(url)
+        self.update_interval = max(update_interval, 120)    # minimum interval is 120 seconds
+        self.is_valid_session = False
+        self.last_update_time = 0
+        self.is_updated = False
         self.accesstoken = None
         self.token_expires = 0
         self.token_expires_date_time = 0
         self.utc_offset_min = 0
         self.ignore_interval = None
         self.cars = []
-        self.map_car_data = {}
-
+        self.bmw_vin = None
         self.utc_offset_min = int(round((datetime.utcnow() - datetime.now()).total_seconds()) / 60)
         _LOGGER.debug("BMW ConnectedDrive API - UTC offset: %s minutes", self.utc_offset_min)
       
         self.generate_credentials() # Get credentials
         if self.is_valid_session:   # Get data
-            self.get_cars()                                     # Get a list with the registered cars
-            self.update()
+            self.get_cars()         # Get a list with the registered cars
+            self.update()           # Get the latest data for all cars in a list
 
     def update(self):
         """ Simple BMW ConnectedDrive API.
             Updates every x minutes as set in the update interval.
         """
         cur_time = time.time()
-        ###with self._lock:
-        ### Bovenstaande aan, dan hieronder inspringen
-        if cur_time - self.last_update_time > self.update_interval:
-            self.cars_data = []                                 # Make the list before loading the new data
-            for car in self.cars:                               # Multiple cars can be registered for a single user
-                bmw_vin = car['vin']                            # Get the VIN
-                car_name = '{} {}'.format(car['brand'], car['modelName'])
-                car_data = self.get_car_data(bmw_vin)           # Get data for this vin
-                _LOGGER.error("BMW ConnectedDrive API: car data %s", car_data)
-                car_data['vin'] = bmw_vin                       # Add VIN to dict           
-                car_data['car_name'] = car_name                 # Add car name to dict
-                self.cars_data.append(car_data)                 # Make a list for every car
-                #self.cars_data.append({'vin': 'WDF546'})       # Test for a second car
-                _LOGGER.info("BMW ConnectedDrive API: data collected from %s", car_name)
-            _LOGGER.error("BMW ConnectedDrive API - map_car_data: %s", self.cars_data)  ### debug
-            self.last_update_time = time.time()
-            self.is_updated = True
-            
-            # Print some data when started from CLI
-            for car in self.cars_data:
-                print('--------------START CAR DATA--------------')
-                for k, v in sorted(car.items()):
-                    print("{}: {}".format(k, v))
-                print('--------------END CAR DATA--------------')
+        with self._lock:
+            if cur_time - self.last_update_time > self.update_interval:
+                self.cars_data = []                                 # Make the list before loading the new data
+                for car in self.cars:                               # Multiple cars can be registered for a single user
+                    bmw_vin = car['vin']                            # Get the VIN
+                    car_name = '{} {}'.format(car['brand'], car['modelName'])
+                    car_data = self.get_car_data(bmw_vin)           # Get data for this vin
+                    _LOGGER.debug("BMW ConnectedDrive API: car data %s", car_data)
+                    car_data['vin'] = bmw_vin                       # Add VIN to dict           
+                    car_data['car_name'] = car_name                 # Add car name to dict
+                    if 'charging_status' in car_data:
+                        if car_data['remaining_fuel'] == '0':
+                            type_of_car = 'electric'
+                        else:
+                            type_of_car = 'hybrid'
+                    else:
+                        type_of_car = 'fuel'
+                    car_data['type_of_car'] = type_of_car           # Add car type to dict
+                    _LOGGER.info("%s: type of car: %s", car_data['car_name'], type_of_car)
+                    self.cars_data.append(car_data)                 # Make a list for every car
+                    _LOGGER.info("BMW ConnectedDrive API: data collected from %s", car_name)
+                _LOGGER.error("BMW ConnectedDrive API: data for all cars  %s", self.cars_data)
+                self.last_update_time = time.time()
+                self.is_updated = True
+                
+                # Print some data when started from CLI
+                for car in self.cars_data:
+                    print('--------------START CAR DATA--------------')
+                    for k, v in sorted(car.items()):
+                        print("{}: {}".format(k, v))
+                    print('--------------END CAR DATA--------------')
 
-            return self.cars_data
+                return self.cars_data
 
-        _LOGGER.info("BMW ConnectedDrive API: no data collected from car as interval has not yet passed")
-        self.is_updated = False
-        return False
+            _LOGGER.info("BMW ConnectedDrive API: no data collected from car as interval time has not yet passed.")
+            self.is_updated = False
+            return False
 
     def token_valid(self):
         """Check if token is still valid, if not make new token."""
@@ -231,13 +235,6 @@ class ConnectedDrive(object):
                                      headers=headers,
                                      allow_redirects=True) ###Timeout
         
-        # try:
-        #     _LOGGER.debug("BMW ConnectedDrive API: connect to URL %s", url)
-        #     data_response.raise_for_status()
-        # except HTTPError as error_message:  # Whoops it wasn't a 200
-        #     _LOGGER.debug("BMW ConnectedDrive API - error code: %s (%s)", error_message.response.status_code, error_message)
-        #     raise BMWException(error_message.response.status_code)
-        
         if data_response.status_code == 200:
             _LOGGER.info("BMW ConnectedDrive API: connect to URL %s", url)
             if data_type == 'dynamic' or data_type == 'servicepartner':
@@ -247,22 +244,8 @@ class ConnectedDrive(object):
         else:
             _LOGGER.error("BMW ConnectedDrive API: error code: %s while getting data", data_response.status_code) ### Status melding nog toevoegen
             
-        return False     ### None of False
-        
-        ###return data_response.status_code
+        return False
     
-    def get_car_data(self, vin):
-        """Get car data from BMW Connected Drive.""" 
-        return self.request_car_data('dynamic', 'attributesMap', vin)
-        ### VOOR DE REST OOK ZO DOEN ALS HIERBOVEN
-        ### hierboven is self.map_car_data weggehaald, gaat dat goed?
-
-    def get_car_location(self, vin):
-        """Get car location from BMW Connected Drive."""
-        self.map_car_location = self.request_car_data('dynamic', 'attributesMap', vin)
-
-        return self.map_car_location
-
     def get_cars(self):
         """Get car data from BMW Connected Drive."""  
         self.cars = self.request_car_data('get_cars')
@@ -283,9 +266,17 @@ class ConnectedDrive(object):
 
         return self.cars
 
-    def get_car_data_service(self):
+    def get_car_data(self, vin):
+        """Get car data from BMW Connected Drive.""" 
+        return self.request_car_data('dynamic', 'attributesMap', vin)
+
+    def get_car_location(self, vin):
+        """Get car location from BMW Connected Drive."""
+        return self.request_car_data('dynamic', 'attributesMap', vin)
+
+    def get_car_data_service(self, vin):
         """Get car data from BMW Connected Drive."""
-        map_car_data_service = self.request_car_data('dynamic', 'vehicleMessages')
+        map_car_data_service = self.request_car_data('dynamic', 'vehicleMessages', vin)
 
         if self.printall:
             _LOGGER.info('--------------START CAR DATA SERVICE--------------')
@@ -295,9 +286,9 @@ class ConnectedDrive(object):
 
         return map_car_data_service
 
-    def get_car_navigation(self):
+    def get_car_navigation(self, vin):
         """Get navigation data from BMW Connected Drive."""
-        map_car_navigation = self.request_car_data('navigation')
+        map_car_navigation = self.request_car_data('navigation', vin)
 
         if self.printall:
             _LOGGER.info('--------------START CAR NAV--------------')
@@ -307,9 +298,9 @@ class ConnectedDrive(object):
 
         return map_car_navigation
 
-    def get_car_efficiency(self):
+    def get_car_efficiency(self, vin):
         """Get efficiency data from BMW Connected Drive."""
-        map_car_efficiency = self.request_car_data('efficiency')
+        map_car_efficiency = self.request_car_data('efficiency', vin)
 
         if self.printall:
             _LOGGER.info('--------------START CAR EFFICIENCY--------------')
@@ -319,9 +310,9 @@ class ConnectedDrive(object):
 
         return map_car_efficiency
 
-    def get_car_service_partner(self):
+    def get_car_service_partner(self, vin):
         """Get servicepartner data from BMW Connected Drive."""       
-        map_car_service_partner = self.request_car_data('servicepartner', 'dealer')
+        map_car_service_partner = self.request_car_data('servicepartner', 'dealer', vin)
 
         if self.printall:
             _LOGGER.info('--------------START CAR SERVICEPARTNER--------------')
@@ -331,7 +322,7 @@ class ConnectedDrive(object):
 
         return map_car_service_partner
 
-    def execute_service(self, service):
+    def execute_service(self, service, vin):
         """Get servicepartner data from BMW Connected Drive."""
         self.token_valid()  # Check if current token is still valid
 
@@ -355,8 +346,8 @@ class ConnectedDrive(object):
         _LOGGER.info("BMW ConnectedDrive API - executing service %s", service)
         command = service_codes[service]
         remote_service_status = None
-        url = '{}/remoteservices/v1/{}/{}'.format(self.bmw_url, self.bmw_vin, command)
-        url_check = '{}/remoteservices/v1/{}/state/execution'.format(self.bmw_url, self.bmw_vin)
+        url = '{}/remoteservices/v1/{}/{}'.format(self.bmw_url, vin, command)
+        url_check = '{}/remoteservices/v1/{}/state/execution'.format(self.bmw_url, vin)
 
         execute_response = requests.post(url,
                                          headers=headers,
@@ -401,10 +392,11 @@ def main():
     if args["printall"]:
         c.printall = True
 
+    ### UPDATE BELOW FOR VIN IN EXECUTE FUNCTION
     # dont query data and execute the service at the same time, takes too long
-    if args["service"]:
+    #if args["service"]:
         # execute service
-        c.execute_service(args["service"])
+    #    c.execute_service(args["service"])
     #else:
         #c.update()
         #c.get_car_data()
