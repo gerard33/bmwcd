@@ -133,7 +133,11 @@ class ConnectedDrive(object):
                     bmw_vin = car['vin']                            # Get the VIN
                     car_name = '{} {}'.format(car['brand'], car['modelName'])
                     car_data = self.get_car_data(bmw_vin)           # Get data for this vin
-                    _LOGGER.debug("BMW ConnectedDrive API: car data %s", car_data)
+                    _LOGGER.error("BMW ConnectedDrive API: car data %s", car_data)  ###debug
+                    # Check which data is fetched, if <> 200 the error number will be returned from self.get_car_data(bmw_vin)
+                    if car_data >= 299:
+                        _LOGGER.error("BMW ConnectedDrive API: data could not be fetched, error code %s", car_data)
+                        return
                     car_data['vin'] = bmw_vin                       # Add VIN to dict           
                     car_data['car_name'] = car_name                 # Add car name to dict
                     if 'charging_status' in car_data:
@@ -162,7 +166,7 @@ class ConnectedDrive(object):
             else:
                 _LOGGER.error("BMW ConnectedDrive API: no data collected from car as interval time has not yet passed.")
                 self.is_updated = False
-                return False
+                return
 
     def token_valid(self):
         """Check if token is still valid, if not make new token."""
@@ -245,7 +249,7 @@ class ConnectedDrive(object):
         else:
             _LOGGER.error("BMW ConnectedDrive API: error code %s while getting data", data_response.status_code) ### Status melding nog toevoegen
             
-        return False
+        return data_response.status_code    ### was return False
     
     def get_cars(self):
         """Get car data from BMW Connected Drive."""  
