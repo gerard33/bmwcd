@@ -133,11 +133,11 @@ class ConnectedDrive(object):
                     bmw_vin = car['vin']                            # Get the VIN
                     car_name = '{} {}'.format(car['brand'], car['modelName'])
                     car_data = self.get_car_data(bmw_vin)           # Get data for this vin
-                    _LOGGER.error("BMW ConnectedDrive API: car data %s", car_data)  ###debug
                     # Check which data is fetched, if <> 200 the error number will be returned from self.get_car_data(bmw_vin)
-                    if car_data >= 299:
+                    if type(car_data) is int:
                         _LOGGER.error("BMW ConnectedDrive API: data could not be fetched, error code %s", car_data)
                         return
+                    _LOGGER.error("BMW ConnectedDrive API: car data %s", car_data)  ###debug
                     car_data['vin'] = bmw_vin                       # Add VIN to dict           
                     car_data['car_name'] = car_name                 # Add car name to dict
                     if 'charging_status' in car_data:
