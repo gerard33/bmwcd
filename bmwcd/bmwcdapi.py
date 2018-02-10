@@ -101,7 +101,8 @@ class ConnectedDrive(object):
             else:
                 self.bmw_url = 'https://{}/api/vehicle'.format(url)
                 self.bmw_url_me = 'https://{}/api/me'.format(url)
-        self.update_interval = max(update_interval, 120)    # minimum interval is 120 seconds
+        ###self.update_interval = max(update_interval, 120)    # minimum interval is 120 seconds
+        self.update_interval = 120
         self.is_valid_session = False
         self.last_update_time = 0
         self.is_updated = False
@@ -159,7 +160,7 @@ class ConnectedDrive(object):
 
                 return self.cars_data
             else:
-                _LOGGER.info("BMW ConnectedDrive API: no data collected from car as interval time has not yet passed.")
+                _LOGGER.error("BMW ConnectedDrive API: no data collected from car as interval time has not yet passed.")
                 self.is_updated = False
                 return False
 
@@ -242,7 +243,7 @@ class ConnectedDrive(object):
             else:
                 return data_response.json()
         else:
-            _LOGGER.error("BMW ConnectedDrive API: error code: %s while getting data", data_response.status_code) ### Status melding nog toevoegen
+            _LOGGER.error("BMW ConnectedDrive API: error code %s while getting data", data_response.status_code) ### Status melding nog toevoegen
             
         return False
     
